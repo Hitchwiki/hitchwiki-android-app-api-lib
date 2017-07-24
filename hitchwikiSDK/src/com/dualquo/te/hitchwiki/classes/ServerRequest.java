@@ -1,19 +1,18 @@
 package com.dualquo.te.hitchwiki.classes;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import com.dualquo.te.hitchwiki.entities.Error;
 
 public class ServerRequest 
 {
@@ -26,6 +25,8 @@ public class ServerRequest
     	
 	public JSONObject postRequest(String url)
 	{
+        String errorMsg = "";
+
 		// Making HTTP request
 		try 
 		{
@@ -40,56 +41,48 @@ public class ServerRequest
             is = httpEntity.getContent();
             System.out.println(is.toString());
         } 
-		catch (UnsupportedEncodingException e) 
+		catch (Exception e)
 		{
-           System.out.println("UnsupportedEncodingException: UnsupportedEncodingExceptio");
-        } 
-		catch (ClientProtocolException e) 
-		{
-        	System.out.println("ClientProtocolException: ClientProtocolException");
-        } 
-		catch (IOException e) 
-		{
-        	System.out.println("IOException: IOException");
+            errorMsg = e.getMessage();
         }
- 
-		try 
-		{
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is, "iso-8859-1"), 8);
-            StringBuilder sb = new StringBuilder();
-            String line = null;
-            while ((line = reader.readLine()) != null) 
-            {
-                sb.append(line + "n");
+
+         if(errorMsg.isEmpty()) {
+             try {
+                 BufferedReader reader = new BufferedReader(new InputStreamReader(is, "iso-8859-1"), 8);
+                 StringBuilder sb = new StringBuilder();
+                 String line = null;
+                 while ((line = reader.readLine()) != null) {
+                     sb.append(line + "n");
+                 }
+                 is.close();
+                 sb.deleteCharAt(sb.length() - 1);
+                 json = sb.toString();
+                 System.out.println("JSON after post: " + json);
+             } catch (Exception e) {
+                 errorMsg = e.getMessage();
+             }
+         }
+
+        if(errorMsg.isEmpty()) {
+            // try parse the string to a JSON object
+            try {
+                jObj = new JSONObject(json);
+            } catch (JSONException e) {
+                errorMsg = e.getMessage();
             }
-            is.close();
-            sb.deleteCharAt(sb.length()-1);
-            json = sb.toString();
-            System.out.println("JSON after post: "+ json);
-        } 
-		catch (Exception e) 
-		{
-        	System.out.println("Buffer Error: Error converting result " + e.toString());
         }
-        
-		// try parse the string to a JSON object
-        try 
-        {
-            jObj = new JSONObject(json);
-        } 
-        catch (JSONException e) 
-        {
-            System.out.println("JSON Parser: Error parsing data " + e.toString());
-        }
- 
-        // return JSON String
+
+        if(!errorMsg.isEmpty())
+            jObj = new Error(true, errorMsg).toJSONObject();
+            // return JSON object
         return jObj;
 	}
 	
 	public String postRequestString(String url)
 	{// Making HTTP request
-        
-		try 
+
+        String errorMsg = "";
+        try
 		{
             // defaultHttpClient
             DefaultHttpClient httpClient = new DefaultHttpClient();
@@ -101,38 +94,31 @@ public class ServerRequest
             is = httpEntity.getContent();
             System.out.println(is.toString());    
         } 
-		catch (UnsupportedEncodingException e) 
+		catch (Exception e)
 		{
-           System.out.println("UnsupportedEncodingExceptio: UnsupportedEncodingExceptio");
-        } 
-		catch (ClientProtocolException e) 
-		{
-        	System.out.println("ClientProtocolException: ClientProtocolException");
-        } 
-		catch (IOException e) 
-		{
-        	System.out.println("IOException: IOException");
+            errorMsg = e.getMessage();
         }
-		
-		try 
-		{
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is, "iso-8859-1"), 8);
-            StringBuilder sb = new StringBuilder();
-            String line = null;
-            while ((line = reader.readLine()) != null) 
-            {
-                sb.append(line + "n");
+
+        if(errorMsg.isEmpty()) {
+            try {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(is, "iso-8859-1"), 8);
+                StringBuilder sb = new StringBuilder();
+                String line = null;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line + "n");
+                }
+                is.close();
+                sb.deleteCharAt(sb.length() - 1);
+                json = sb.toString();
+            } catch (Exception e) {
+                errorMsg = "Buffer Error: Error converting result.\n\"" + e.getMessage() + "\"";
             }
-            is.close();
-            sb.deleteCharAt(sb.length()-1);
-            json = sb.toString();
-            return json;
-        } 
-		catch (Exception e) 
-		{
-        	System.out.println("Buffer Error: Error converting result " + e.toString());
         }
-        return null;
+
+        if(!errorMsg.isEmpty())
+            json = new Error(true, errorMsg).toJSONString();
+        // return JSON string
+        return json;
 	}
 	
 //	public JSONObject getRequest(String url, String token, String xApiKey)
